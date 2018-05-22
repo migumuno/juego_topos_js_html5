@@ -31,7 +31,7 @@ function main() {
         juego.revisarTopos();
 
         // Ejecuto el ciclo (FPS)
-        if( juego.contador % juego.velocidad == 0 ) {
+        if( juego.contador % juego.velocidad == 0 && juego.contador != 0 ) {
             // Intento crear un topo en cada ciclo, depende de si la topera aleatoria está disponible
             juego.crearTopo();
 
@@ -53,11 +53,11 @@ function Juego(nivel) {
     // Variables configurables del juego
     this.FPS = 100;
     this.niveles = [
-        {velocidad: 1, toperas: 3, topos: 20, tiempo: 60},
-        {velocidad: 2, toperas: 3, topos: 20, tiempo: 60},
-        {velocidad: 3, toperas: 4, topos: 30, tiempo: 60},
-        {velocidad: 4, toperas: 4, topos: 30, tiempo: 60},
-        {velocidad: 5, toperas: 5, topos: 40, tiempo: 60}
+        {velocidad: 1, toperas: 3, topos: 40, tiempo: 60},
+        {velocidad: 2, toperas: 3, topos: 50, tiempo: 60},
+        {velocidad: 3, toperas: 4, topos: 60, tiempo: 60},
+        {velocidad: 4, toperas: 4, topos: 70, tiempo: 60},
+        {velocidad: 5, toperas: 5, topos: 80, tiempo: 60}
     ];
     this.maxInvasion = 8;
     this.escenario = {
@@ -80,6 +80,7 @@ function Juego(nivel) {
     this.velocidad = this.FPS - (this.niveles[this.nivel - 1].velocidad * 10);
     this.invasion = this.niveles[this.nivel-1].toperas;
     this.contador = 0;
+    this.contadorTopos = 0;
     this.topos = [];
     this.toposConstructores = [];
     this.toperas = [];
@@ -152,16 +153,30 @@ function Juego(nivel) {
             filas++;
         });
 
-        // Pinto las toperas
-        this.toperas.forEach(topera => {
-            context.fillStyle = '#FF0000';
-            context.fillRect( (topera.x * this.escenario.anchoCelda), (topera.y * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
-        });
+        if (!this.finJuego()) {
+            // Pinto las toperas
+            this.toperas.forEach(topera => {
+                context.fillStyle = '#FF0000';
+                context.fillRect( (topera.x * this.escenario.anchoCelda), (topera.y * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
+            });
 
-        // Pinto los topos
-        this.topos.forEach(topo => {
-            topo.dibujaTopo();
-        });
+            // Pinto los topos
+            if( this.contadorTopos <= this.niveles[this.nivel-1].topos ) {
+                this.topos.forEach(topo => {
+                    topo.dibujaTopo();
+                });
+            } else {
+                this.toposConstructores.forEach(topo => {
+                    if( topo.contador == 0 ) {
+                        var topera = Math.floor( Math.random() * this.toperas.length );
+                        topo.topera = topera;
+                        if (this.toperas[topera].libre) {
+                                topo.dibujaTopo();
+                        }
+                    }
+                });
+            }
+        }
     }
 
     // Creo nuevo topo
@@ -169,23 +184,31 @@ function Juego(nivel) {
         if(this.toperas.length > 0) {
             var topera = Math.floor( Math.random() * this.toperas.length );
             if (this.toperas[topera].libre) {
-                this.topos.push( new Topo(topera) );
+                if( this.contadorTopos <= this.niveles[this.nivel-1].topos ) {
+                    this.topos.push( new Topo(topera) );
+                    this.contadorTopos++;
+                } else {
+                    this.toposConstructores[0].contador = 0;
+                }
             }
         }
     }
 
-    // Reviso si hay que quitar topos del vanvas
+    // Quito los topos que hayan consumido el tiempo
     this.revisarTopos = function() {
-        this.topos.forEach((topo, index) => {
-            if( topo.finTiempoVida() ) {
-                this.toperas[topo.topera].libre = true;
-                if( !topo.hit ) {
-                    this.toposConstructores.push( topo );
-                    console.log(this.toposConstructores);
+        if( this.contadorTopos <= this.niveles[this.nivel-1].topos ) {
+            this.topos.forEach((topo, index) => {
+                if( topo.finTiempoVida() ) {
+                    this.toperas[topo.topera].libre = true;
+                    if( !topo.hit ) {
+                        //console.log(topo)
+                        this.toposConstructores.push( topo );
+                        //console.log(this.toposConstructores);
+                    }
+                    this.topos.splice(index, 1);
                 }
-                this.topos.splice(index, 1);
-            }
-        });
+            });
+        }
     }
 
     // Compruebo el final del juego y devuelvo el motivo
