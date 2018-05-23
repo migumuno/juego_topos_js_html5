@@ -38,7 +38,7 @@ function Juego(nivel) {
     // Variables configurables del juego
     this.FPS = 100;
     this.niveles = [
-        {velocidad: 1, toperas: 3, topos: 40, tiempo: 60},
+        {velocidad: 1, toperas: 2, topos: 40, tiempo: 60},
         {velocidad: 2, toperas: 3, topos: 50, tiempo: 60},
         {velocidad: 3, toperas: 4, topos: 60, tiempo: 60},
         {velocidad: 4, toperas: 4, topos: 70, tiempo: 60},
@@ -75,15 +75,15 @@ function Juego(nivel) {
         quitarTopera = {
             icono: 'brown',
             tipo: 'asignacion',
-            accion: function(topera) {
-                juego.quitarTopera(topera);
+            accion: function() {
+                juego.quitarTopera();
             }
         },
         trampaTopos = {
             icono: 'blue',
             tipo: 'asignacion',
-            accion: function(topera) {
-                juego.trampaTopos(topera);
+            accion: function() {
+                juego.trampaTopos();
             }
         },
         bonusTiempo = {
@@ -115,6 +115,11 @@ function Juego(nivel) {
         for (let index = 0; index < this.niveles[this.nivel-1].topos; index++) {
             this.topos.push( new Topo() );
         }
+
+        // Nombre el último topo constructor
+        let topo = this.topos.pop();
+        topo.constructor = 1;
+        this.topos.push( topo );
 
         // Creo un escuchador de evento para el mouse en el canvas
         canvas.addEventListener( 'mousedown', event => {
@@ -183,18 +188,22 @@ function Juego(nivel) {
     // Se encarga de usar el item que este en la posición indicada
     this.useItem = function(key) {
         let numItem = this.escenario.teclas.indexOf(key.toUpperCase());
-        if (this.items[numItem].item != 0) {
-            // Si es de uso directo se ejecuta la accion
-            if( this.items[numItem].item.tipo == 'directo' ) {
-                this.items[numItem].item.accion();
-                // Reinicio el item una vez usado
-                this.items[numItem].item = 0;
-                
-            // Sino se guarda la accion para ejecutarla sobre un elemento
-            } else {
-                this.accion = {
-                    item: this.items[numItem].item,
-                    tecla: numItem
+        if( numItem < this.items.length ) {
+            if (this.items[numItem].item != 0) {
+                // Si es de uso directo se ejecuta la accion
+                if( this.items[numItem].item.tipo == 'directo' ) {
+                    this.items[numItem].item.accion();
+                    // Reinicio el item una vez usado
+                    this.items[numItem].item = 0;
+                    this.accion = null;
+                    
+                // Sino se guarda la accion para ejecutarla sobre un elemento
+                } else {
+                    this.accion = {
+                        item: this.items[numItem].item,
+                        tecla: numItem,
+                        topera: null
+                    }
                 }
             }
         }
@@ -217,13 +226,18 @@ function Juego(nivel) {
     }
 
     // Acción que permite eliminar la topera seleccionada
-    this.quitarTopera = function(topera) {
-        this.toperas.splice(topera, 1);
+    this.quitarTopera = function() {
+        this.toperas.splice(this.accion.topera, 1);
+        this.topos.forEach( (topo, index) => {
+            if( topo.topera == this.accion.topera ) {
+                this.topos[index].esconder();
+            }
+        } );
     }
 
     // Acción que coloca una trampa para topos en la topera seleccionada
-    this.trampaTopos = function(topera) {
-        console.log( 'Pongo trampa para topos', topera );
+    this.trampaTopos = function() {
+        console.log( 'Pongo trampa para topos', this.accion.topera );
     } 
 
     // Acción que incrementa el tiempo restante de la partida
@@ -241,15 +255,21 @@ function Juego(nivel) {
             let rangoMaxY = rangoMinY + this.escenario.altoCelda;
             
             if ( x >= rangoMinX && x <= rangoMaxX && y >= rangoMinY && y <= rangoMaxY ) {
+                // Si hay acción marcada la guardo para ejecutar al final del frame
                 if( this.accion !== null ) {
-                    this.accion.item.accion(indexToperas);
-                    this.items[this.accion.tecla].item = 0;
-                    this.accion = null;
+                    this.accion.topera = indexToperas;
                 }
+
+                // Busco si se ha golpeado un topo y si obtengo bonus
                 this.topos.forEach( (topo, indexTopos) => {
                     if( topo.topera == indexToperas && topo.asomado()) {
+                        // Elimino topo golpeado
                         this.topos.splice( indexTopos, 1 );
-                        this.getBonus();
+                        
+                        // Intento conseguir bonus
+                        if( this.toperas.length > this.niveles[this.nivel-1].toperas ) {
+                            this.getBonus();
+                        }
                     }
                 } );
             }
@@ -279,13 +299,24 @@ function Juego(nivel) {
             }
 
             // Calculo la Y
-            let y = Math.floor( Math.random() * ( (this.escenario.tablero.length - 1) - 1 ) + 1 );
+            let y;
+            if( this.toperas.length <= 2 ) {
+                y = 0;
+            } else if( this.toperas.length <= 4 ) {
+                y = 2;
+            } else if( this.toperas.length <= 6 ) {
+                y = 4;
+            } else {
+                y = 6;
+            }
+
+            /*let y = Math.floor( Math.random() * ( (this.escenario.tablero.length - 1) - 1 ) + 1 );
             // Dejo un hueco de distancia en las y
             if( y % 2 == 0 && y != this.escenario.tablero.length - 1 ) {
                 y += 1;
             } else if( y == (this.escenario.tablero.length - 1) ) {
                 y -= 1;
-            }
+            }*/
 
             if (this.toperas.length > 0) {
                 find = this.toperas.find(function(element) {
@@ -339,6 +370,9 @@ function Juego(nivel) {
             if (this.toperas[topera].libre) {
                 let topo = this.topos.shift();
                 // Asomo el topo y le convierto en constructor
+                console.log(topera);
+                console.log(this.toperas);
+                console.log(topo);
                 topo.asignarTopera(topera);
                 topo.contador = 0;
                 topo.constructor = 1;
@@ -406,12 +440,24 @@ function Juego(nivel) {
         });
     }
 
+    // Ejecuto la accion que esté marcada
+    this.ejecutarAccion = function() {
+        if( this.accion !== null && this.accion.topera !== null ) {
+            this.accion.item.accion();
+            this.items[this.accion.tecla].item = 0;
+            this.accion = null;
+        }
+    }
+
     // Pinta el escenario en el canvas
     this.pintarEscenario = function() {
         // Pinto el tablero
         this.pintarTablero();
 
         if (!this.finJuego()) {
+            // Ejecuto la acción marcada
+            this.ejecutarAccion();
+
             // Actualizo el contador
             this.actualizaContador();
 
@@ -440,7 +486,12 @@ function Juego(nivel) {
 
         // Compruebo si se han eliminado todas las toperas
         if(this.toperas.length == 0) {
-            fin = 'win';
+            fin = 'sinToperas';
+        }
+
+        // Si ya no quedan topos
+        if( this.topos.length == 0 ) {
+            fin = 'sinTopos';
         }
 
         // Compruebo si el tiempo se ha agotado
@@ -491,6 +542,11 @@ function Topo() {
         } else {
             return true;
         }
+    }
+
+    this.esconder = function() {
+        this.topera = null;
+        this.contador = this.duracion + 1;
     }
 }
 
