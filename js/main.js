@@ -22,6 +22,45 @@ function init() {
     imgPala = new Image();
     imgPala.src = 'img/pala.png';
 
+    // Sonidos
+    // Música de fondo
+    musica = new Howl({
+        src: ['music/forest.mp3'],
+        loop: true
+    });
+
+    // Sonido hit
+    sonidoHit = new Howl({
+        src: ['sounds/hit05.mp3.flac'],
+        loop: false
+    });
+
+    // Sonido pala
+    sonidoPala = new Howl({
+        src: ['sounds/interface3.wav'],
+        loop: false
+    });
+
+    // Sonido tiempo
+    sonidoTiempo = new Howl({
+        src: ['sounds/qubodup-SlowDown.ogg'],
+        loop: false
+    });
+
+    // Sonido trampa
+    sonidoTrampa = new Howl({
+        src: ['sounds/interface1.wav'],
+        loop: false
+    });
+
+    // Sonido coger item
+    sonidoItem = new Howl({
+        src: ['sounds/chainmail1.wav'],
+        loop: false
+    });
+
+    musica.play();
+
     // Creo el juego
     juego = new Juego(nivel);
     juego.init();
@@ -145,8 +184,9 @@ function Juego(nivel) {
         // Creo un escuchador de evento para las teclas de acción
         document.addEventListener( 'keydown', event => {
             let key = event.key;
-
-            this.useItem(key);
+            if( juego.escenario.teclas.indexOf(key.toUpperCase()) != -1) {
+                this.useItem(key);
+            }            
         } )
 
         // Asigno teclas a posiciones
@@ -169,8 +209,8 @@ function Juego(nivel) {
     // MÉTODOS
     // Reinicia el canvas vacío
     this.borraCanvas = function() {
-        canvas.width=750;
-        canvas.height=500;
+        canvas.width = 1200;
+        canvas.height = 800;
     }
 
     // Actualiza el contador de tiempo
@@ -236,6 +276,7 @@ function Juego(nivel) {
                     let itemBonus = Math.floor( Math.random() * 3 );
                     this.items[index].item = this.bonus[itemBonus];
                     bonusAsignado = true;
+                    sonidoItem.play();
                 }
             } );
         }
@@ -243,6 +284,9 @@ function Juego(nivel) {
 
     // Acción que permite eliminar la topera seleccionada
     this.quitarTopera = function() {
+        // Reproduzco sonido
+        sonidoPala.play();
+    
         this.toperas.splice(this.accion.topera, 1);
         this.topos.forEach( (topo, index) => {
             if( topo.topera == this.accion.topera ) {
@@ -253,11 +297,17 @@ function Juego(nivel) {
 
     // Acción que coloca una trampa para topos en la topera seleccionada
     this.trampaTopos = function() {
+        // Reproduzco sonido
+        sonidoTrampa.play();
+
         this.toperas[this.accion.topera].activarTrampa();
     } 
 
     // Acción que incrementa el tiempo restante de la partida
     this.bonusTiempo = function() {
+        // Reproduzco sonido
+        sonidoTiempo.play();
+
         this.contador += 10 * this.FPS;
     }
 
@@ -279,6 +329,9 @@ function Juego(nivel) {
                 // Busco si se ha golpeado un topo y si obtengo bonus
                 this.topos.forEach( (topo, indexTopos) => {
                     if( topo.topera == indexToperas && topo.asomar()) {
+                        // Reproduzco sonido
+                        sonidoHit.play();
+
                         // Elimino topo golpeado
                         this.topos.splice( indexTopos, 1 );
                         
@@ -405,7 +458,7 @@ function Juego(nivel) {
                     // Busco el topo que este en la topera y lo elimino
                     this.topos.forEach( (topo, indexTopo) => {
                         if( topo.topera == indexTopera ) {
-                            this.topos.splice(indexTopo, 1);s
+                            this.topos.splice(indexTopo, 1);
                             this.toperas[indexTopera].desactivarTrampa();
                         }
                     } );
@@ -635,10 +688,12 @@ function Topera(x, y, libre) {
 
         // Dibujo la trampa si tiene
         if( this.trampa ) {
-            context.beginPath();
+            /*context.beginPath();
             context.arc((this.x * juego.escenario.anchoCelda) + (juego.escenario.anchoCelda / 2), (this.y * juego.escenario.altoCelda) + juego.escenario.altoCelda, 10, 0, Math.PI * 2, false);
             context.fillStyle='orange';
-            context.fill();
+            context.fill();*/
+
+            context.drawImage(imgTrampa, (this.x * juego.escenario.anchoCelda), (this.y * juego.escenario.altoCelda) + 15, juego.escenario.anchoCelda, juego.escenario.altoCelda);
         }     
     }
 
