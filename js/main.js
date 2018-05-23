@@ -56,7 +56,7 @@ function Juego(nivel) {
             [0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,2,0,2,0,2,0,2,0,0,0,0],
+            [0,2,0,2,0,2,0,2,0,2,0,0],
         ],
         anchoCelda: canvas.width / 12,
         altoCelda: canvas.height / 9,
@@ -64,11 +64,12 @@ function Juego(nivel) {
             fondoTablero: '#FFFFFF',
             fondoItem: '#EFEFEF',
             colorTexto: '#333333',
+            destacado: 'FFBF00'
         },
         fuentes: {
-            textoTeclas: "16px Arial"
+            textoTeclas: "12px Arial"
         },
-        teclas: ['Q', 'W', 'E', 'R']
+        teclas: ['Q', 'W', 'E', 'R', 'T']
     };
     this.bonus = [
         quitarTopera = {
@@ -181,21 +182,7 @@ function Juego(nivel) {
 
     // Se encarga de usar el item que este en la posición indicada
     this.useItem = function(key) {
-        let numItem;
-        switch (key) {
-            case 'q':
-                numItem = 0;
-                break;
-            case 'w':
-                numItem = 1;
-                break;
-            case 'e':
-                numItem = 2;
-                break;
-            case 'r':
-                numItem = 3;
-                break;
-        }
+        let numItem = this.escenario.teclas.indexOf(key.toUpperCase());
         if (this.items[numItem].item != 0) {
             // Si es de uso directo se ejecuta la accion
             if( this.items[numItem].item.tipo == 'directo' ) {
@@ -374,6 +361,7 @@ function Juego(nivel) {
         this.escenario.tablero.forEach(fila => {
             var columnas = 0;
             fila.forEach(columna => {
+                let destacado = 0;
                 switch (columna) {
                     // 
                     case 1:
@@ -381,16 +369,29 @@ function Juego(nivel) {
                         break;
                     // Items
                     case 2:
-                        context.fillStyle = this.escenario.colores.fondoItem;
+                        // Destaco la tecla en caso de estar marcada
+                        context.fillStyle = this.escenario.colores.destacado;
                         context.fillRect( (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
+
+                        // Pinto el rectángulo de fondo
+                        if(this.accion !== null && this.accion.tecla == teclasText) {
+                            destacado = 2;
+                        }
+                        context.fillStyle = this.escenario.colores.fondoItem;
+                        context.fillRect( (columnas * this.escenario.anchoCelda) + destacado, (filas * this.escenario.altoCelda) + destacado, this.escenario.anchoCelda - (destacado * 2), this.escenario.altoCelda - (destacado * 2) );
+                        
+                        // Pinto la letra de la tecla
                         context.font = this.escenario.fuentes.textoTeclas;
                         context.fillStyle = this.escenario.colores.colorTexto;
                         context.textAlign = "center";
-                        context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) + this.escenario.altoCelda );
+                        context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) + this.escenario.altoCelda - 4 );
+                        
+                        // Pinto el item en caso de existir
                         if( this.items[teclasText].item !== 0 ) {
                             context.fillStyle = this.items[teclasText].item.icono;
                             context.fillRect( (columnas * this.escenario.anchoCelda) + 15, (filas * this.escenario.altoCelda) + 10, this.escenario.anchoCelda - 30, this.escenario.altoCelda - 25 );
                         }
+
                         teclasText++;
                         break;
                     // Fondo tablero
