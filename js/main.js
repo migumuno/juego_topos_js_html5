@@ -1,4 +1,4 @@
-var canvas, context, juego, contador, invasion;
+var canvas, context, juego, contador, invasion, num_topos;
 const nivel = 1;
 
 function init() {
@@ -10,6 +10,17 @@ function init() {
     contador = document.getElementById( 'contador' );
     invasion = document.getElementById( 'invasion' );
     constructores = document.getElementById( 'constructores' );
+    num_topos = document.getElementById( 'num_topos' );
+
+    // Imágenes
+    imgTopo = new Image();
+    imgTopo.src = 'img/topo.png';
+    imgReloj = new Image();
+    imgReloj.src = 'img/reloj_arena.png';
+    imgTrampa = new Image();
+    imgTrampa.src = 'img/trampa_topo.png';
+    imgPala = new Image();
+    imgPala.src = 'img/pala.png';
 
     // Creo el juego
     juego = new Juego(nivel);
@@ -27,7 +38,9 @@ function main() {
     juego.pintarEscenario();
 
     // Contabilizo los frames
-    juego.contador++;
+    if( !juego.finJuego() ) {
+        juego.contador++;
+    }
 }
 
 function Juego(nivel) {
@@ -39,10 +52,10 @@ function Juego(nivel) {
     this.FPS = 100;
     this.niveles = [
         {velocidad: 1, toperas: 2, topos: 40, tiempo: 60},
-        {velocidad: 2, toperas: 3, topos: 50, tiempo: 60},
-        {velocidad: 3, toperas: 4, topos: 60, tiempo: 60},
-        {velocidad: 4, toperas: 4, topos: 70, tiempo: 60},
-        {velocidad: 5, toperas: 5, topos: 80, tiempo: 60}
+        {velocidad: 2, toperas: 3, topos: 50, tiempo: 80},
+        {velocidad: 3, toperas: 4, topos: 60, tiempo: 100},
+        {velocidad: 4, toperas: 4, topos: 70, tiempo: 120},
+        {velocidad: 5, toperas: 5, topos: 80, tiempo: 140}
     ];
     this.maxInvasion = 8;
     this.estadoConstruccionTopera = 10;
@@ -54,7 +67,7 @@ function Juego(nivel) {
             [0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,1,1,1,1,1,1,1,1,1,0,0],
             [0,0,0,0,0,0,0,0,0,0,0,0],
             [0,2,0,2,0,2,0,2,0,2,0,0],
         ],
@@ -73,21 +86,21 @@ function Juego(nivel) {
     };
     this.bonus = [
         quitarTopera = {
-            icono: 'brown',
+            icono: imgPala,
             tipo: 'asignacion',
             accion: function() {
                 juego.quitarTopera();
             }
         },
         trampaTopos = {
-            icono: 'blue',
+            icono: imgTrampa,
             tipo: 'asignacion',
             accion: function() {
                 juego.trampaTopos();
             }
         },
         bonusTiempo = {
-            icono: 'green',
+            icono: imgReloj,
             tipo: 'directo',
             accion: function() {
                 juego.bonusTiempo();
@@ -116,7 +129,7 @@ function Juego(nivel) {
             this.topos.push( new Topo() );
         }
 
-        // Nombre el último topo constructor
+        // Nombro al último topo constructor
         let topo = this.topos.pop();
         topo.constructor = 1;
         this.topos.push( topo );
@@ -178,11 +191,14 @@ function Juego(nivel) {
         // Indicador de constructores
         let n = 0;
         this.topos.forEach( topo => {
-            if( topo.constructor ) {
+            if( topo.isConstructor() ) {
                 n++;
             }
         } );
         constructores.innerHTML = n;
+        
+        // Indicador de topos
+        num_topos.innerHTML = this.topos.length;
     }
 
     // Se encarga de usar el item que este en la posición indicada
@@ -237,12 +253,12 @@ function Juego(nivel) {
 
     // Acción que coloca una trampa para topos en la topera seleccionada
     this.trampaTopos = function() {
-        console.log( 'Pongo trampa para topos', this.accion.topera );
+        this.toperas[this.accion.topera].activarTrampa();
     } 
 
     // Acción que incrementa el tiempo restante de la partida
     this.bonusTiempo = function() {
-        this.contador -= 10 * this.FPS;
+        this.contador += 10 * this.FPS;
     }
 
     // Comprobación evento hit en topo
@@ -262,7 +278,7 @@ function Juego(nivel) {
 
                 // Busco si se ha golpeado un topo y si obtengo bonus
                 this.topos.forEach( (topo, indexTopos) => {
-                    if( topo.topera == indexToperas && topo.asomado()) {
+                    if( topo.topera == indexToperas && topo.asomar()) {
                         // Elimino topo golpeado
                         this.topos.splice( indexTopos, 1 );
                         
@@ -287,7 +303,8 @@ function Juego(nivel) {
     // Generar una posición para una topera
     this.addTopera = function() {
         let find = true;
-        while (find) {
+        let contadorSalida = 0;
+        while (find && contadorSalida < 20) {
             // Obtengo las coordenadas aleatorias
             // Calculo la X
             let x = Math.floor( Math.random() * ( (this.escenario.tablero[0].length - 2) - 1 ) + 1 );
@@ -333,6 +350,7 @@ function Juego(nivel) {
                 find = false;
                 this.toperas.push( new Topera(x, y, true) );
             }
+            contadorSalida++;
         }
     }
 
@@ -342,7 +360,7 @@ function Juego(nivel) {
             // Obtengo los constructores que hay
             let constructores = 0;
             this.topos.forEach( topo => {
-                if( topo.constructor == 1 ) {
+                if( topo.isConstructor() ) {
                     constructores++;
                 }
             } );
@@ -359,7 +377,7 @@ function Juego(nivel) {
     // Dibujo los topos asomados
     this.pintarTopos = function() {
         this.topos.forEach( topo => {
-            if( topo.asomado() ) {
+            if( topo.asomar() ) {
                 topo.dibuja();
             }
         } );
@@ -370,14 +388,31 @@ function Juego(nivel) {
             if (this.toperas[topera].libre) {
                 let topo = this.topos.shift();
                 // Asomo el topo y le convierto en constructor
-                console.log(topera);
-                console.log(this.toperas);
-                console.log(topo);
                 topo.asignarTopera(topera);
                 topo.contador = 0;
                 topo.constructor = 1;
                 this.topos.push( topo );
             }
+        }
+    }
+
+    // Compruebo si hay trampas en las toperas
+    this.compruebaTrampas = function() {
+        if( this.ciclo ) {
+            // Busco las toperas que tienen trampa
+            this.toperas.forEach( (topera, indexTopera) => {
+                if(topera.trampa) {
+                    // Busco el topo que este en la topera y lo elimino
+                    this.topos.forEach( (topo, indexTopo) => {
+                        if( topo.topera == indexTopera ) {
+                            this.topos.splice(indexTopo, 1);s
+                            this.toperas[indexTopera].desactivarTrampa();
+                        }
+                    } );
+                }
+            } );
+
+            
         }
     }
 
@@ -397,9 +432,14 @@ function Juego(nivel) {
             fila.forEach(columna => {
                 let destacado = 0;
                 switch (columna) {
-                    // 
+                    // Destacado
                     case 1:
-                        
+                        context.lineWith = 1;
+                        context.strokeStyle = this.escenario.colores.destacado;
+                        context.beginPath();
+                        context.moveTo(columnas * this.escenario.anchoCelda, filas * this.escenario.altoCelda);
+                        context.lineTo((columnas * this.escenario.anchoCelda) + this.escenario.anchoCelda, filas * this.escenario.altoCelda);
+                        context.stroke();
                         break;
                     // Items
                     case 2:
@@ -418,12 +458,13 @@ function Juego(nivel) {
                         context.font = this.escenario.fuentes.textoTeclas;
                         context.fillStyle = this.escenario.colores.colorTexto;
                         context.textAlign = "center";
-                        context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) + this.escenario.altoCelda - 4 );
+                        context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) - 4 );
                         
                         // Pinto el item en caso de existir
                         if( this.items[teclasText].item !== 0 ) {
-                            context.fillStyle = this.items[teclasText].item.icono;
-                            context.fillRect( (columnas * this.escenario.anchoCelda) + 15, (filas * this.escenario.altoCelda) + 10, this.escenario.anchoCelda - 30, this.escenario.altoCelda - 25 );
+                            // context.fillStyle = this.items[teclasText].item.icono;
+                            // context.fillRect( (columnas * this.escenario.anchoCelda) + 15, (filas * this.escenario.altoCelda) + 10, this.escenario.anchoCelda - 30, this.escenario.altoCelda - 25 );
+                            context.drawImage(this.items[teclasText].item.icono, (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda);
                         }
 
                         teclasText++;
@@ -454,12 +495,12 @@ function Juego(nivel) {
         // Pinto el tablero
         this.pintarTablero();
 
+        // Actualizo el contador
+        this.actualizaContador();
+
         if (!this.finJuego()) {
             // Ejecuto la acción marcada
             this.ejecutarAccion();
-
-            // Actualizo el contador
-            this.actualizaContador();
 
             // Compruebo estado de construcción de toperas
             this.construccionToperas();
@@ -470,9 +511,15 @@ function Juego(nivel) {
             // Pinto los topos
             this.pintarTopos();
 
-            // Actualizo el indicador de invasión
-            this.actualizoIndicadores();
+            // Activo las trampas para topos
+            this.compruebaTrampas();
+        } else {
+            // Pinto las toperas
+            this.pintarToperas();
         }
+
+        // Actualizo el indicador de invasión
+        this.actualizoIndicadores();
     }
 
     // Compruebo el final del juego y devuelvo el motivo
@@ -480,9 +527,14 @@ function Juego(nivel) {
         var fin = 0;
         
         // Compruebo si los topos han conseguido invadir
-        if(this.toperas.length >= this.maxInvasion) {
+        /*if(this.toperas.length >= this.maxInvasion) {
             fin = 'invasion';
-        }
+        }*/
+        this.toperas.forEach( (topera, index) => {
+            if( topera.y >= 6 ) {
+                fin = 'invasion';
+            }
+        } );
 
         // Compruebo si se han eliminado todas las toperas
         if(this.toperas.length == 0) {
@@ -516,7 +568,6 @@ function Topo() {
     this.contador = this.duracion + 1;
     this.constructor = 0;
     this.topera;
-    this.hit = false;
     this.anchoTopo = juego.escenario.anchoCelda;
     this.altoTopo = juego.escenario.altoCelda;
 
@@ -524,8 +575,11 @@ function Topo() {
     this.dibuja = function() {
         let x = juego.toperas[this.topera].x * juego.escenario.anchoCelda;
         let y = juego.toperas[this.topera].y * juego.escenario.altoCelda;
-        context.fillStyle = this.color;
-        context.fillRect(x, y, this.anchoTopo, this.altoTopo);
+        /*context.fillStyle = this.color;
+        context.fillRect(x, y, this.anchoTopo, this.altoTopo);*/
+
+        context.drawImage(imgTopo, x, y, juego.escenario.anchoCelda, juego.escenario.altoCelda);
+        
 
         // Ocupo la topera
         juego.toperas[this.topera].libre = false;
@@ -535,7 +589,15 @@ function Topo() {
         this.topera = topera;
     }
 
-    this.asomado = function() {
+    this.isConstructor = function() {
+        if( this.constructor ) {
+            return true;
+        } else {
+            return false;
+        }
+    } 
+
+    this.asomar = function() {
         this.contador++;
         if( this.contador >  this.duracion) {
             return false;
@@ -557,13 +619,36 @@ function Topera(x, y, libre) {
     this.x = x;
     this.y = y;
     this.libre = libre;
+    this.trampa = 0;
 
     // Variables configurables
-    this.color = '#FF0000';
+    this.color = '#9D893D';
 
     // MÉTODOS
     this.dibuja = function() {
+        // Dibujo la topera
         context.fillStyle = this.color;
-        context.fillRect( (this.x * juego.escenario.anchoCelda), (this.y * juego.escenario.altoCelda), juego.escenario.anchoCelda, juego.escenario.altoCelda );
+        // context.fillRect( (this.x * juego.escenario.anchoCelda), (this.y * juego.escenario.altoCelda), juego.escenario.anchoCelda, juego.escenario.altoCelda );
+        context.beginPath();
+        context.ellipse((this.x * juego.escenario.anchoCelda) + (juego.escenario.anchoCelda / 2), (this.y * juego.escenario.altoCelda) + (juego.escenario.altoCelda / 4 * 3), 40, 15, 0, 0, Math.PI * 2, false);
+        context.fill();
+
+        // Dibujo la trampa si tiene
+        if( this.trampa ) {
+            context.beginPath();
+            context.arc((this.x * juego.escenario.anchoCelda) + (juego.escenario.anchoCelda / 2), (this.y * juego.escenario.altoCelda) + juego.escenario.altoCelda, 10, 0, Math.PI * 2, false);
+            context.fillStyle='orange';
+            context.fill();
+        }     
+    }
+
+    // Desactiva la trampa
+    this.desactivarTrampa = function() {
+        this.trampa = 0;
+    }
+
+    // Activar trampa
+    this.activarTrampa = function() {
+        this.trampa = 1;
     }
 }
