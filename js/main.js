@@ -11,14 +11,14 @@ const config = {
         {velocidad: 5, toperas: 5, topos: 80, tiempo: 140}
     ],
     tablero: [
+        [3,1,0,0,0,0,0,0,0,0,0,0],
         [2,1,0,0,0,0,0,0,0,0,0,0],
         [2,1,0,0,0,0,0,0,0,0,0,0],
         [2,1,0,0,0,0,0,0,0,0,0,0],
         [2,1,0,0,0,0,0,0,0,0,0,0],
         [2,1,0,0,0,0,0,0,0,0,0,0],
-        [2,1,0,0,0,0,0,0,0,0,0,0],
-        [2,1,0,0,0,0,0,0,0,0,0,0],
-        [2,1,0,0,0,0,0,0,0,0,0,0]
+        [3,1,0,0,0,0,0,0,0,0,0,0],
+        [3,1,0,0,0,0,0,0,0,0,0,0]
     ]
 }
 
@@ -102,7 +102,7 @@ function main() {
     juego.pintarEscenario();
 
     // Contabilizo los frames
-    if( !juego.finJuego() ) {
+    if( !juego.finJuego().resultado ) {
         juego.contador++;
     }
 }
@@ -118,8 +118,8 @@ function Juego(config) {
     this.tiempoConstruccionTopera = config.tiempoConstruccionTopera;
     this.escenario = {
         tablero: config.tablero,
-        anchoCelda: canvas.width / 12,
-        altoCelda: canvas.height / 9,
+        anchoCelda: canvas.width / config.tablero[0].length,
+        altoCelda: canvas.height / config.tablero.length,
         colores: {
             fondoTablero: '#FFFFFF',
             fondoItem: '#EFEFEF',
@@ -502,7 +502,7 @@ function Juego(config) {
                             context.font = this.escenario.fuentes.textoTeclas;
                             context.fillStyle = this.escenario.colores.colorTexto;
                             context.textAlign = "center";
-                            context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) - 4 );
+                            context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) + this.escenario.altoCelda - 4 );
                         }
 
                         // Pinto el item en caso de existir
@@ -520,6 +520,12 @@ function Juego(config) {
                         teclasText++;
                         break;
                     // Fondo tablero
+                    case 3:
+                        // Pinto el rectángulo de fondo
+                        context.fillStyle = this.escenario.colores.fondoItem;
+                        context.fillRect( (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
+                        
+                        break;
                     default:
                         context.drawImage(imgTilemap, 505, 90, 45, 45, (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda);
                         
@@ -548,7 +554,7 @@ function Juego(config) {
         // Actualizo el contador
         this.actualizaContador();
 
-        if (!this.finJuego()) {
+        if (!this.finJuego().resultado) {
             // Ejecuto la acción marcada
             this.ejecutarAccion();
 
@@ -566,35 +572,62 @@ function Juego(config) {
         } else {
             // Pinto las toperas
             this.pintarToperas();
+
+            // Pinto el resultado
+            this.pintarResultado();
         }
 
         // Actualizo el indicador de invasión
         this.actualizoIndicadores();
     }
 
+    // Pinta el resultado de la partida una vez terminada
+    this.pintarResultado = function() {
+        // Pinto fondo
+        context.globalAlpha=0.5;
+        context.fillStyle = this.escenario.colores.destacado;        
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.globalAlpha=1.0;
+
+        // Pinto texto
+        let final = this.finJuego().texto;
+
+        context.font = this.escenario.fuentes.textoTeclas;
+        context.fillStyle = "#FFFFFF";
+        context.textAlign = "center";
+        context.fillText( final, canvas.width / 2, canvas.height / 2 );
+    }
+
     // Compruebo el final del juego y devuelvo el motivo
     this.finJuego = function() {
-        var fin = 0;
+        var fin = {
+            resultado: false,
+            texto: ''
+        };
 
         this.toperas.forEach( (topera, index) => {
             if( topera.x <= 1 ) {
-                fin = 'invasion';
+                fin.resultado = true;
+                fin.texto = 'Has sido invadido';
             }
         } );
 
         // Compruebo si se han eliminado todas las toperas
         if(this.toperas.length == 0) {
-            fin = 'sinToperas';
+            fin.resultado = true;
+            fin.texto = 'Has ganado eliminando todas las toperas';
         }
 
         // Si ya no quedan topos
         if( this.topos.length == 0 ) {
-            fin = 'sinTopos';
+            fin.resultado = true;
+            fin.texto = 'Has ganado eliminando a todos los topos';
         }
 
         // Compruebo si el tiempo se ha agotado
         if(this.contador > this.niveles[this.nivel-1].tiempo * this.FPS) {
-            fin = 'tiempo';
+            fin.resultado = true;
+            fin.texto = 'Has ganado consiguiendo aguantar el tiempo';
         }
 
         return fin;
