@@ -1,5 +1,26 @@
 var canvas, context, juego, contador, invasion, num_topos;
-const nivel = 1;
+const config = {
+    nivel: 1,
+    FPS: 100,
+    tiempoConstruccionTopera: 10,
+    niveles: [
+        {velocidad: 1, toperas: 2, topos: 40, tiempo: 60},
+        {velocidad: 2, toperas: 3, topos: 50, tiempo: 80},
+        {velocidad: 3, toperas: 4, topos: 60, tiempo: 100},
+        {velocidad: 4, toperas: 4, topos: 70, tiempo: 120},
+        {velocidad: 5, toperas: 5, topos: 80, tiempo: 140}
+    ],
+    tablero: [
+        [2,1,0,0,0,0,0,0,0,0,0,0],
+        [2,1,0,0,0,0,0,0,0,0,0,0],
+        [2,1,0,0,0,0,0,0,0,0,0,0],
+        [2,1,0,0,0,0,0,0,0,0,0,0],
+        [2,1,0,0,0,0,0,0,0,0,0,0],
+        [2,1,0,0,0,0,0,0,0,0,0,0],
+        [2,1,0,0,0,0,0,0,0,0,0,0],
+        [2,1,0,0,0,0,0,0,0,0,0,0]
+    ]
+}
 
 function init() {
     // Defino el canvas
@@ -13,6 +34,10 @@ function init() {
     num_topos = document.getElementById( 'num_topos' );
 
     // Imágenes
+    // Tilemap
+    imgTilemap = new Image();
+    imgTilemap.src = 'img/terrain_atlas.png';
+
     imgTopo = new Image();
     imgTopo.src = 'img/topo.png';
     imgReloj = new Image();
@@ -62,7 +87,7 @@ function init() {
     musica.play();
 
     // Creo el juego
-    juego = new Juego(nivel);
+    juego = new Juego(config);
     juego.init();
 
     // Inicio el bucle principal del juego
@@ -82,34 +107,17 @@ function main() {
     }
 }
 
-function Juego(nivel) {
+function Juego(config) {
     // VARIABLES
     // Variables pasadas por parámetro
-    this.nivel = nivel;
+    this.nivel = config.nivel;
 
     // Variables configurables del juego
-    this.FPS = 100;
-    this.niveles = [
-        {velocidad: 1, toperas: 2, topos: 40, tiempo: 60},
-        {velocidad: 2, toperas: 3, topos: 50, tiempo: 80},
-        {velocidad: 3, toperas: 4, topos: 60, tiempo: 100},
-        {velocidad: 4, toperas: 4, topos: 70, tiempo: 120},
-        {velocidad: 5, toperas: 5, topos: 80, tiempo: 140}
-    ];
-    this.maxInvasion = 8;
-    this.estadoConstruccionTopera = 10;
+    this.FPS = config.FPS;
+    this.niveles = config.niveles;
+    this.tiempoConstruccionTopera = config.tiempoConstruccionTopera;
     this.escenario = {
-        tablero: [
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,1,1,1,1,1,1,1,1,1,0,0],
-            [0,0,0,0,0,0,0,0,0,0,0,0],
-            [0,2,0,2,0,2,0,2,0,2,0,0],
-        ],
+        tablero: config.tablero,
         anchoCelda: canvas.width / 12,
         altoCelda: canvas.height / 9,
         colores: {
@@ -209,8 +217,8 @@ function Juego(nivel) {
     // MÉTODOS
     // Reinicia el canvas vacío
     this.borraCanvas = function() {
-        canvas.width = 1200;
-        canvas.height = 800;
+        canvas.width = 1000;
+        canvas.height = 500;
     }
 
     // Actualiza el contador de tiempo
@@ -359,34 +367,28 @@ function Juego(nivel) {
         let contadorSalida = 0;
         while (find && contadorSalida < 20) {
             // Obtengo las coordenadas aleatorias
-            // Calculo la X
-            let x = Math.floor( Math.random() * ( (this.escenario.tablero[0].length - 2) - 1 ) + 1 );
-            // Dejo un hueco de distancia en las x
-            if( x % 2 == 0 && x != this.escenario.tablero[0].length - 2 ) {
-                x += 1;
-            } else if( x == (this.escenario.tablero[0].length - 2) ) {
-                x -= 1;
-            }
-
             // Calculo la Y
-            let y;
-            if( this.toperas.length <= 2 ) {
-                y = 0;
-            } else if( this.toperas.length <= 4 ) {
-                y = 2;
-            } else if( this.toperas.length <= 6 ) {
-                y = 4;
-            } else {
-                y = 6;
-            }
-
-            /*let y = Math.floor( Math.random() * ( (this.escenario.tablero.length - 1) - 1 ) + 1 );
+            let y = Math.floor( Math.random() * ( (this.escenario.tablero.length - 1) - 1 ) + 1 );
             // Dejo un hueco de distancia en las y
             if( y % 2 == 0 && y != this.escenario.tablero.length - 1 ) {
                 y += 1;
-            } else if( y == (this.escenario.tablero.length - 1) ) {
-                y -= 1;
-            }*/
+            }
+
+            // Calculo la X
+            let x;
+            if( this.toperas.length <= 2 ) {
+                x = (this.escenario.tablero[0].length - 1);
+            } else if( this.toperas.length <= 4 ) {
+                x = (this.escenario.tablero[0].length - 1) - 2;
+            } else if( this.toperas.length <= 6 ) {
+                x = (this.escenario.tablero[0].length - 1) - 4;
+            } else if( this.toperas.length <= 8 ) {
+                x = (this.escenario.tablero[0].length - 1) - 6;
+            } else if( this.toperas.length <= 10 ) {
+                x = (this.escenario.tablero[0].length - 1) - 8;
+            } else {
+                x = (this.escenario.tablero[0].length - 1) - 10;
+            }
 
             if (this.toperas.length > 0) {
                 find = this.toperas.find(function(element) {
@@ -419,10 +421,10 @@ function Juego(nivel) {
             } );
 
             // Actualizar el indiceConstruccionTopera
-            this.estadoConstruccionTopera -= constructores;
-            if (this.estadoConstruccionTopera <= 0) {
+            this.tiempoConstruccionTopera -= constructores;
+            if (this.tiempoConstruccionTopera <= 0) {
                 this.addTopera();
-                this.estadoConstruccionTopera += 10;
+                this.tiempoConstruccionTopera += 10;
             }
         }
     }
@@ -487,45 +489,40 @@ function Juego(nivel) {
                 switch (columna) {
                     // Destacado
                     case 1:
-                        context.lineWith = 1;
-                        context.strokeStyle = this.escenario.colores.destacado;
-                        context.beginPath();
-                        context.moveTo(columnas * this.escenario.anchoCelda, filas * this.escenario.altoCelda);
-                        context.lineTo((columnas * this.escenario.anchoCelda) + this.escenario.anchoCelda, filas * this.escenario.altoCelda);
-                        context.stroke();
+                        context.drawImage(imgTilemap, 602, 90, 45, 45, (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda);                        
                         break;
                     // Items
-                    case 2:
-                        // Destaco la tecla en caso de estar marcada
-                        context.fillStyle = this.escenario.colores.destacado;
-                        context.fillRect( (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
-
+                    case 2:                        
                         // Pinto el rectángulo de fondo
-                        if(this.accion !== null && this.accion.tecla == teclasText) {
-                            destacado = 2;
-                        }
                         context.fillStyle = this.escenario.colores.fondoItem;
-                        context.fillRect( (columnas * this.escenario.anchoCelda) + destacado, (filas * this.escenario.altoCelda) + destacado, this.escenario.anchoCelda - (destacado * 2), this.escenario.altoCelda - (destacado * 2) );
+                        context.fillRect( (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
                         
                         // Pinto la letra de la tecla
-                        context.font = this.escenario.fuentes.textoTeclas;
-                        context.fillStyle = this.escenario.colores.colorTexto;
-                        context.textAlign = "center";
-                        context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) - 4 );
-                        
+                        if( this.escenario.teclas[teclasText] != undefined ) {
+                            context.font = this.escenario.fuentes.textoTeclas;
+                            context.fillStyle = this.escenario.colores.colorTexto;
+                            context.textAlign = "center";
+                            context.fillText( this.escenario.teclas[teclasText], (columnas * this.escenario.anchoCelda) + (this.escenario.anchoCelda / 2), (filas * this.escenario.altoCelda) - 4 );
+                        }
+
                         // Pinto el item en caso de existir
                         if( this.items[teclasText].item !== 0 ) {
-                            // context.fillStyle = this.items[teclasText].item.icono;
-                            // context.fillRect( (columnas * this.escenario.anchoCelda) + 15, (filas * this.escenario.altoCelda) + 10, this.escenario.anchoCelda - 30, this.escenario.altoCelda - 25 );
                             context.drawImage(this.items[teclasText].item.icono, (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda);
+                        }
+
+                        // Destaco la tecla en caso de estar marcada
+                        if(this.accion !== null && this.accion.tecla == teclasText) {
+                            context.strokeStyle = this.escenario.colores.destacado;
+                            context.lineWidth = 2;                                                  
+                            context.strokeRect( (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
                         }
 
                         teclasText++;
                         break;
                     // Fondo tablero
                     default:
-                        context.fillStyle = this.escenario.colores.fondoTablero;
-                        context.fillRect( (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda );
+                        context.drawImage(imgTilemap, 505, 90, 45, 45, (columnas * this.escenario.anchoCelda), (filas * this.escenario.altoCelda), this.escenario.anchoCelda, this.escenario.altoCelda);
+                        
                         break;
                 }
                 columnas++;
@@ -578,13 +575,9 @@ function Juego(nivel) {
     // Compruebo el final del juego y devuelvo el motivo
     this.finJuego = function() {
         var fin = 0;
-        
-        // Compruebo si los topos han conseguido invadir
-        /*if(this.toperas.length >= this.maxInvasion) {
-            fin = 'invasion';
-        }*/
+
         this.toperas.forEach( (topera, index) => {
-            if( topera.y >= 6 ) {
+            if( topera.x <= 1 ) {
                 fin = 'invasion';
             }
         } );
@@ -631,7 +624,7 @@ function Topo() {
         /*context.fillStyle = this.color;
         context.fillRect(x, y, this.anchoTopo, this.altoTopo);*/
 
-        context.drawImage(imgTopo, x, y, juego.escenario.anchoCelda, juego.escenario.altoCelda);
+        context.drawImage(imgTopo, x + 10, y + 5, juego.escenario.anchoCelda - 20, juego.escenario.altoCelda - 20);
         
 
         // Ocupo la topera
@@ -682,9 +675,14 @@ function Topera(x, y, libre) {
         // Dibujo la topera
         context.fillStyle = this.color;
         // context.fillRect( (this.x * juego.escenario.anchoCelda), (this.y * juego.escenario.altoCelda), juego.escenario.anchoCelda, juego.escenario.altoCelda );
-        context.beginPath();
+        /*context.beginPath();
         context.ellipse((this.x * juego.escenario.anchoCelda) + (juego.escenario.anchoCelda / 2), (this.y * juego.escenario.altoCelda) + (juego.escenario.altoCelda / 4 * 3), 40, 15, 0, 0, Math.PI * 2, false);
-        context.fill();
+        context.fill();*/
+        if(this.x <= 1 ) {
+            context.drawImage(imgTilemap, 612, 0, 60, 60, (this.x * juego.escenario.anchoCelda), (this.y * juego.escenario.altoCelda), juego.escenario.anchoCelda, juego.escenario.altoCelda);            
+        } else {
+            context.drawImage(imgTilemap, 515, 0, 60, 60, (this.x * juego.escenario.anchoCelda), (this.y * juego.escenario.altoCelda), juego.escenario.anchoCelda, juego.escenario.altoCelda);
+        }
 
         // Dibujo la trampa si tiene
         if( this.trampa ) {
